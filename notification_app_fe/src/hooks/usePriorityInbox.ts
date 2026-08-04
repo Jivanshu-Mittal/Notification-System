@@ -86,6 +86,7 @@ export interface UsePriorityInboxResult {
   loading: boolean;
   error: string | null;
   markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
   refetch: () => void;
 }
 
@@ -150,5 +151,14 @@ export function usePriorityInbox(topN = 10): UsePriorityInboxResult {
     void Log("frontend", "debug", "hook", `usePriorityInbox: marked ${id} as read`);
   }, []);
 
-  return { topNotifications, readIds, loading, error, markAsRead, refetch: load };
+  const markAllAsRead = useCallback(() => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      topNotifications.forEach((n) => next.add(n.ID));
+      return next;
+    });
+    void Log("frontend", "info", "hook", "usePriorityInbox: marked all top notifications as read");
+  }, [topNotifications]);
+
+  return { topNotifications, readIds, loading, error, markAsRead, markAllAsRead, refetch: load };
 }

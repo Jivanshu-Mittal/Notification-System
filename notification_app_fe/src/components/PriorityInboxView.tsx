@@ -1,8 +1,8 @@
 /**
  * PriorityInboxView — Displays the top-N highest priority notifications using
- * the Min-Heap algorithm from usePriorityInbox hook.
+ * the Min-Heap algorithm from usePriorityInbox hook, integrated with priority alarms.
  *
- * Visual distinction: ranked badge, type colour, unread dot, read/muted state.
+ * Visual distinction: ranked badge, priority alarm banner, overdue status, read/muted state.
  */
 
 "use client";
@@ -23,6 +23,8 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import InboxIcon from "@mui/icons-material/Inbox";
 import { usePriorityInbox } from "@/hooks/usePriorityInbox";
+import { usePriorityAlarm } from "@/hooks/usePriorityAlarm";
+import AlarmBanner from "@/components/AlarmBanner";
 import NotificationCard from "@/components/NotificationCard";
 import { Log } from "@/lib/logger";
 
@@ -59,8 +61,10 @@ function EmptyState(): React.ReactElement {
 }
 
 export default function PriorityInboxView(): React.ReactElement {
-  const { topNotifications, readIds, loading, error, markAsRead, refetch } =
+  const { topNotifications, readIds, loading, error, markAsRead, markAllAsRead, refetch } =
     usePriorityInbox(10);
+
+  const alarmState = usePriorityAlarm(topNotifications, readIds);
 
   const unreadCount = topNotifications.filter((n) => !readIds.has(n.ID)).length;
 
@@ -71,6 +75,13 @@ export default function PriorityInboxView(): React.ReactElement {
 
   return (
     <Box>
+      {/* Priority Alarm Banner */}
+      <AlarmBanner
+        alarmState={alarmState}
+        onMarkAllRead={markAllAsRead}
+        onMarkRead={markAsRead}
+      />
+
       {/* Header */}
       <Box
         sx={{
@@ -154,6 +165,7 @@ export default function PriorityInboxView(): React.ReactElement {
               notification={n}
               isRead={readIds.has(n.ID)}
               rank={index + 1}
+              alarmInfo={alarmState.getNotificationAlarmInfo(n, readIds.has(n.ID))}
               onMarkRead={markAsRead}
             />
           ))}

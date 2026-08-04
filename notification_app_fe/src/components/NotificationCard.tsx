@@ -1,6 +1,6 @@
 /**
  * NotificationCard — MUI card displaying a single notification.
- * Visually differentiates between read (muted) and unread (highlighted) states.
+ * Visually differentiates between read (muted), unread (highlighted), and alarm (overdue pulsing) states.
  */
 
 "use client";
@@ -19,7 +19,9 @@ import DoneAllIcon from "@mui/icons-material/DoneAll";
 import WorkIcon from "@mui/icons-material/Work";
 import SchoolIcon from "@mui/icons-material/School";
 import EventIcon from "@mui/icons-material/Event";
+import AlarmIcon from "@mui/icons-material/Alarm";
 import { Notification } from "@/lib/api";
+import { AlarmItem } from "@/hooks/usePriorityAlarm";
 import { Log } from "@/lib/logger";
 
 // ── Type metadata ──────────────────────────────────────────────────────────────
@@ -51,6 +53,7 @@ interface NotificationCardProps {
   notification: Notification;
   isRead: boolean;
   rank?: number;                         // Optional rank number for priority inbox
+  alarmInfo?: AlarmItem | null;          // Optional priority alarm details
   onMarkRead: (id: string) => void;
 }
 
@@ -60,9 +63,11 @@ export default function NotificationCard({
   notification,
   isRead,
   rank,
+  alarmInfo,
   onMarkRead,
 }: NotificationCardProps): React.ReactElement {
   const config = TYPE_CONFIG[notification.Type];
+  const isAlarm = Boolean(alarmInfo && !isRead);
 
   function handleMarkRead(): void {
     onMarkRead(notification.ID);
@@ -76,17 +81,27 @@ export default function NotificationCard({
 
   return (
     <Card
-      elevation={isRead ? 0 : 3}
+      elevation={isAlarm ? 6 : isRead ? 0 : 3}
       sx={{
         mb: 1.5,
         border: "1px solid",
-        borderColor: isRead ? "#e0e0e0" : config.color,
-        borderLeft: `5px solid ${isRead ? "#bdbdbd" : config.color}`,
-        backgroundColor: isRead ? "#fafafa" : config.bg,
+        borderColor: isAlarm ? "#d32f2f" : isRead ? "#e0e0e0" : config.color,
+        borderLeft: `6px solid ${isAlarm ? "#d32f2f" : isRead ? "#bdbdbd" : config.color}`,
+        backgroundColor: isAlarm ? "#fff0f0" : isRead ? "#fafafa" : config.bg,
         opacity: isRead ? 0.75 : 1,
         transition: "all 0.25s ease",
+        position: "relative",
+        overflow: "visible",
+        ...(isAlarm && {
+          animation: "cardPulse 1.5s infinite ease-in-out",
+          "@keyframes cardPulse": {
+            "0%": { boxShadow: "0 0 0 0 rgba(211, 47, 47, 0.4)" },
+            "70%": { boxShadow: "0 0 0 8px rgba(211, 47, 47, 0)" },
+            "100%": { boxShadow: "0 0 0 0 rgba(211, 47, 47, 0)" },
+          },
+        }),
         "&:hover": {
-          boxShadow: isRead ? 1 : 4,
+          boxShadow: isRead ? 1 : 5,
           opacity: 1,
         },
       }}
@@ -101,7 +116,7 @@ export default function NotificationCard({
                   minWidth: 32,
                   height: 32,
                   borderRadius: "50%",
-                  backgroundColor: config.color,
+                  backgroundColor: isAlarm ? "#d32f2f" : config.color,
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
@@ -115,21 +130,43 @@ export default function NotificationCard({
               </Box>
             )}
 
-            <Box sx={{ color: config.color, flexShrink: 0, mt: 0.3 }}>
+            <Box sx={{ color: isAlarm ? "#d32f2f" : config.color, flexShrink: 0, mt: 0.3 }}>
               {config.icon}
             </Box>
 
             <Box sx={{ flexGrow: 1 }}>
               <Typography
                 variant="body1"
-                color={isRead ? "text.secondary" : "text.primary"}
-                sx={{ fontWeight: isRead ? 400 : 600, lineHeight: 1.3 }}
+                color={isAlarm ? "#d32f2f" : isRead ? "text.secondary" : "text.primary"}
+                sx={{ fontWeight: isAlarm ? 700 : isRead ? 400 : 600, lineHeight: 1.3 }}
               >
                 {notification.Message}
               </Typography>
-              <Typography variant="caption" color="text.disabled">
-                {formattedDate}
-              </Typography>
+
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mt: 0.3 }}>
+                <Typography variant="caption" color="text.disabled">
+                  {formattedDate}
+                </Typography>
+
+                {isAlarm && alarmInfo && (
+                  <Chip
+                    icon={<AlarmIcon fontSize="small" style={{ color: "#fff" }} />}
+                    label={`OVERDUE (+${alarmInfo.overdueSeconds}s)`}
+                    size="small"
+                    color="error"
+                    sx={{
+                      height: 20,
+                      fontSize: "0.68rem",
+                      fontWeight: 700,
+                      animation: "blink 1s infinite alternate",
+                      "@keyframes blink": {
+                        "0%": { opacity: 0.7 },
+                        "100%": { opacity: 1 },
+                      },
+                    }}
+                  />
+                )}
+              </Box>
             </Box>
           </Box>
 
@@ -149,19 +186,19 @@ export default function NotificationCard({
                   width: 8,
                   height: 8,
                   borderRadius: "50%",
-                  backgroundColor: config.color,
+                  backgroundColor: isAlarm ? "#d32f2f" : config.color,
                   flexShrink: 0,
                 }}
               />
             )}
 
-            <Tooltip title={isRead ? "Already read" : "Mark as read"}>
+            <Tooltip title={isRead ? "Already read" : isAlarm ? "Acknowledge & Clear Alarm" : "Mark as read"}>
               <span>
                 <IconButton
                   size="small"
                   onClick={handleMarkRead}
                   disabled={isRead}
-                  sx={{ color: isRead ? "#bdbdbd" : config.color }}
+                  sx={{ color: isAlarm ? "#d32f2f" : isRead ? "#bdbdbd" : config.color }}
                 >
                   <DoneAllIcon fontSize="small" />
                 </IconButton>

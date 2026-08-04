@@ -1,6 +1,6 @@
 /**
  * NotificationList — Full paginated notifications page component.
- * Includes type filter tabs, loading skeleton, error boundary,
+ * Includes priority-wise alarm banner, type filter tabs, loading skeleton, error boundary,
  * and empty state with MUI components.
  */
 
@@ -27,6 +27,8 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import { useNotifications } from "@/hooks/useNotifications";
+import { usePriorityAlarm } from "@/hooks/usePriorityAlarm";
+import AlarmBanner from "@/components/AlarmBanner";
 import NotificationCard from "@/components/NotificationCard";
 import { NotificationType } from "@/lib/api";
 import { Log } from "@/lib/logger";
@@ -85,6 +87,8 @@ export default function NotificationList(): React.ReactElement {
       notification_type: activeTab === "All" ? undefined : activeTab,
     });
 
+  const alarmState = usePriorityAlarm(notifications, readIds);
+
   const unreadCount = notifications.filter((n) => !readIds.has(n.ID)).length;
 
   function handleTabChange(_: React.SyntheticEvent, value: FilterTab): void {
@@ -104,6 +108,13 @@ export default function NotificationList(): React.ReactElement {
 
   return (
     <Box>
+      {/* Priority Alarm Banner */}
+      <AlarmBanner
+        alarmState={alarmState}
+        onMarkAllRead={handleMarkAllRead}
+        onMarkRead={markAsRead}
+      />
+
       {/* Header row */}
       <Box
         sx={{
@@ -199,6 +210,7 @@ export default function NotificationList(): React.ReactElement {
               key={n.ID}
               notification={n}
               isRead={readIds.has(n.ID)}
+              alarmInfo={alarmState.getNotificationAlarmInfo(n, readIds.has(n.ID))}
               onMarkRead={markAsRead}
             />
           ))}
