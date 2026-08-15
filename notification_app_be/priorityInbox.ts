@@ -15,6 +15,7 @@
  */
 
 import * as http from "http";
+import * as https from "https";
 import { Log } from "../logging_middleware/logger";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ interface Notification {
   ID: string;
   Type: "Placement" | "Result" | "Event";
   Message: string;
-  Timestamp: string; // e.g. "2026-04-22 17:51:30"
+  Timestamp: string; // e.g. "2026-04-22 17:51:30" or "2026-04-22T17:51:30Z"
 }
 
 interface HeapEntry {
@@ -34,16 +35,16 @@ interface HeapEntry {
 // ── Configuration ──────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  apiBaseUrl: "http://4.224.186.213",
-  apiPath: "/evaluation-service/notifications",
+  apiBaseUrl: process.env.API_BASE_URL ?? "http://4.224.186.213",
+  apiPath: process.env.API_PATH ?? "/evaluation-service/notifications",
   apiToken: process.env.API_TOKEN ?? "",
-  topN: parseInt(process.argv[2] ?? "10", 10) || 10,
+  topN: parseInt(process.argv[2] ?? process.env.TOP_N ?? "10", 10) || 10,
   pollIntervalMs: parseInt(process.env.POLL_MS ?? "10000", 10) || 10_000,
 };
 
 // ── Priority weights ───────────────────────────────────────────────────────────
 
-const TYPE_WEIGHTS: Record<Notification["Type"], number> = {
+const TYPE_WEIGHTS: Record<string, number> = {
   Placement: 3,
   Result: 2,
   Event: 1,
@@ -56,14 +57,20 @@ const TYPE_WEIGHTS: Record<Notification["Type"], number> = {
  * Unix timestamp (~1.7 × 10⁹ in 2026), so the type weight always dominates
  * and recency cleanly breaks ties within the same type.
  *
+ * Safely normalizes date strings to ISO-8601 to avoid NaN timestamp scores.
+ *
  * Time complexity: O(1)
  */
 function getPriorityScore(notification: Notification): number {
   const TYPE_SCALE = 2_000_000_000;
   const weight = TYPE_WEIGHTS[notification.Type] ?? 0;
-  const timestampSeconds = Math.floor(
-    new Date(notification.Timestamp).getTime() / 1000
-  );
+
+  // Convert "2026-04-22 17:51:30" format to ISO string "2026-04-22T17:51:30" for cross-platform Date parsing
+  const rawTs = String(notification.Timestamp ?? "").trim();
+  const isoTs = rawTs.includes(" ") ? rawTs.replace(" ", "T") : rawTs;
+  const dateMs = new Date(isoTs).getTime();
+  const timestampSeconds = isNaN(dateMs) ? 0 : Math.floor(dateMs / 1000);
+
   return weight * TYPE_SCALE + timestampSeconds;
 }
 
@@ -157,9 +164,10 @@ class PriorityInbox {
   private heap = new MinHeap();
   private seenIds = new Set<string>();
 
-  constructor(private readonly topN: number) {}
+  constructor(private readonly topN: number) { }
 
   offer(notification: Notification): boolean {
+    if (!notification || !notification.ID) return false;
     if (this.seenIds.has(notification.ID)) return false;
 
     const priority = getPriorityScore(notification);
@@ -186,6 +194,7 @@ class PriorityInbox {
   }
 
   loadBatch(notifications: Notification[]): void {
+    if (!Array.isArray(notifications)) return;
     let inserted = 0;
     for (const n of notifications) {
       if (this.offer(n)) inserted++;
@@ -204,11 +213,21 @@ function fetchNotifications(): Promise<Notification[]> {
   return new Promise((resolve, reject) => {
     Log("backend", "info", "service", "Requesting notifications from external API");
 
-    const url = new URL(CONFIG.apiBaseUrl);
+    let url: URL;
+    try {
+      url = new URL(CONFIG.apiPath, CONFIG.apiBaseUrl);
+    } catch (err) {
+      reject(new Error(`Invalid API URL: ${CONFIG.apiBaseUrl}${CONFIG.apiPath}`));
+      return;
+    }
+
+    const isHttps = url.protocol === "https:";
+    const client = isHttps ? https : http;
+
     const options: http.RequestOptions = {
       hostname: url.hostname,
-      port: Number(url.port) || 80,
-      path: CONFIG.apiPath,
+      port: url.port ? Number(url.port) : (isHttps ? 443 : 80),
+      path: url.pathname + url.search,
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -217,15 +236,21 @@ function fetchNotifications(): Promise<Notification[]> {
       },
     };
 
-    const req = http.request(options, (res) => {
+    const req = client.request(options, (res) => {
       Log("backend", "info", "service", `API response status: ${res.statusCode}`);
+      res.setEncoding("utf8");
       let data = "";
       res.on("data", (chunk: string) => { data += chunk; });
       res.on("end", () => {
         if (res.statusCode === 200) {
           try {
-            const body = JSON.parse(data) as { notifications: Notification[] };
-            resolve(body.notifications ?? []);
+            const body = JSON.parse(data);
+            const notifications: Notification[] = Array.isArray(body)
+              ? body
+              : Array.isArray(body?.notifications)
+                ? body.notifications
+                : [];
+            resolve(notifications);
           } catch (err) {
             Log("backend", "error", "service", `JSON parse error: ${(err as Error).message}`);
             reject(err);
@@ -264,7 +289,7 @@ function renderTable(notifications: Notification[], limit: number): void {
   process.stdout.write(`${thin}\n`);
   notifications.forEach((n, i) => {
     process.stdout.write(
-      `  ${ `#${i + 1}`.padEnd(6)} ${n.Type.padEnd(12)} ${n.Timestamp.padEnd(22)} ${n.Message}\n`
+      `  ${`#${i + 1}`.padEnd(6)} ${String(n.Type ?? "").padEnd(12)} ${String(n.Timestamp ?? "").padEnd(22)} ${n.Message ?? ""}\n`
     );
   });
   process.stdout.write(`${line}\n\n`);
@@ -288,10 +313,21 @@ async function startApp(): Promise<void> {
 
   await poll();
   Log("backend", "info", "cron_job", `Polling every ${CONFIG.pollIntervalMs}ms`);
-  setInterval(poll, CONFIG.pollIntervalMs);
+
+  let isPolling = false;
+  setInterval(async () => {
+    if (isPolling) return;
+    isPolling = true;
+    try {
+      await poll();
+    } finally {
+      isPolling = false;
+    }
+  }, CONFIG.pollIntervalMs);
 }
 
 startApp().catch((err: Error) => {
   Log("backend", "fatal", "service", `Process crashed: ${err.message}`);
   process.exit(1);
 });
+

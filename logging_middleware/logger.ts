@@ -8,6 +8,9 @@
  *   await Log("backend", "info", "service", "Notification batch processed");
  */
 
+// Ambient type declaration for Node.js process global
+declare const process: any;
+
 // ── Allowed enum types ─────────────────────────────────────────────────────────
 
 export type Stack = "backend" | "frontend";

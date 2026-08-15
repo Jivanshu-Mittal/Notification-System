@@ -13,5 +13,9 @@
   "dependencies": {
     "concurrently": "^8.2.2",
     "dotenv-cli": "^7.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
   }
 }
