@@ -128,7 +128,7 @@ export default function PriorityInboxView(): React.ReactElement {
       {/* Algorithm note */}
       <Paper
         variant="outlined"
-        sx={{ p: 1.5, mb: 2, backgroundColor: "#f5f5f5", borderColor: "#e0e0e0" }}
+        sx={{ p: 1.5, mb: 2, backgroundColor: "action.hover", borderColor: "divider" }}
       >
         <Typography variant="caption" color="text.secondary">
           <strong>Algorithm:</strong> Fixed-size Min-Heap (O(log N) per insert).

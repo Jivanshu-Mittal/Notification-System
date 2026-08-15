@@ -21,6 +21,8 @@ import Link from "next/link";
 import PriorityInboxView from "@/components/PriorityInboxView";
 import { Log } from "@/lib/logger";
 
+import ThemeToggle from "@/components/ThemeToggle";
+
 export default function PriorityPage(): React.ReactElement {
   useEffect(() => {
     void Log("frontend", "info", "page", "PriorityPage mounted — Priority Inbox view");
@@ -29,7 +31,16 @@ export default function PriorityPage(): React.ReactElement {
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "background.default" }}>
       {/* Navigation bar */}
-      <AppBar position="sticky" elevation={1} sx={{ backgroundColor: "#fff", color: "text.primary" }}>
+      <AppBar
+        position="sticky"
+        elevation={1}
+        sx={{
+          backgroundColor: "background.paper",
+          color: "text.primary",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
         <Toolbar>
           <Avatar sx={{ bgcolor: "primary.main", mr: 1.5, width: 36, height: 36 }}>
             <NotificationsIcon fontSize="small" />
@@ -38,7 +49,7 @@ export default function PriorityPage(): React.ReactElement {
             CampusNotify
           </Typography>
 
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <Button
               variant="outlined"
               component={Link}
@@ -57,6 +68,7 @@ export default function PriorityPage(): React.ReactElement {
             >
               Priority Inbox
             </Button>
+            <ThemeToggle />
           </Box>
         </Toolbar>
       </AppBar>

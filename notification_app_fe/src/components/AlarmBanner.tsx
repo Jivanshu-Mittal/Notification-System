@@ -31,11 +31,16 @@ interface AlarmBannerProps {
   onMarkRead: (id: string) => void;
 }
 
+import { useTheme } from "@mui/material/styles";
+
 export default function AlarmBanner({
   alarmState,
   onMarkAllRead,
   onMarkRead,
 }: AlarmBannerProps): React.ReactElement {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+
   const [expanded, setExpanded] = useState<boolean>(false);
   const {
     activeAlarms,
@@ -49,6 +54,22 @@ export default function AlarmBanner({
 
   const hasAlarms = activeAlarms.length > 0;
 
+  const bannerBg = hasAlarms
+    ? isDark
+      ? "rgba(211, 47, 47, 0.15)"
+      : "#fff5f5"
+    : isDark
+    ? "background.paper"
+    : "#ffffff";
+
+  const bannerBorder = hasAlarms
+    ? isDark
+      ? "#ef5350"
+      : "#d32f2f"
+    : isDark
+    ? "rgba(255, 255, 255, 0.12)"
+    : "#e0e0e0";
+
   return (
     <Paper
       elevation={hasAlarms ? 6 : 1}
@@ -57,13 +78,13 @@ export default function AlarmBanner({
         p: 2,
         borderRadius: 2,
         border: "1px solid",
-        borderColor: hasAlarms ? "#d32f2f" : "#e0e0e0",
-        backgroundColor: hasAlarms ? "#fff5f5" : "#ffffff",
+        borderColor: bannerBorder,
+        backgroundColor: bannerBg,
         transition: "all 0.3s ease",
         ...(hasAlarms && {
           animation: "pulseBorder 2s infinite ease-in-out",
           "@keyframes pulseBorder": {
-            "0%": { boxShadow: "0 0 0 0 rgba(211, 47, 47, 0.4)" },
+            "0%": { boxShadow: `0 0 0 0 ${isDark ? "rgba(239, 83, 80, 0.4)" : "rgba(211, 47, 47, 0.4)"}` },
             "70%": { boxShadow: "0 0 0 10px rgba(211, 47, 47, 0)" },
             "100%": { boxShadow: "0 0 0 0 rgba(211, 47, 47, 0)" },
           },

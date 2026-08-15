@@ -22,6 +22,8 @@ import NotificationList from "@/components/NotificationList";
 import { Log } from "@/lib/logger";
 import { useEffect } from "react";
 
+import ThemeToggle from "@/components/ThemeToggle";
+
 export default function HomePage(): React.ReactElement {
   useEffect(() => {
     void Log("frontend", "info", "page", "HomePage mounted — All Notifications view");
@@ -30,7 +32,16 @@ export default function HomePage(): React.ReactElement {
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "background.default" }}>
       {/* Navigation bar */}
-      <AppBar position="sticky" elevation={1} sx={{ backgroundColor: "#fff", color: "text.primary" }}>
+      <AppBar
+        position="sticky"
+        elevation={1}
+        sx={{
+          backgroundColor: "background.paper",
+          color: "text.primary",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
         <Toolbar>
           <Avatar sx={{ bgcolor: "primary.main", mr: 1.5, width: 36, height: 36 }}>
             <NotificationsIcon fontSize="small" />
@@ -39,7 +50,7 @@ export default function HomePage(): React.ReactElement {
             CampusNotify
           </Typography>
 
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <Button
               variant="contained"
               component={Link}
@@ -58,6 +69,7 @@ export default function HomePage(): React.ReactElement {
             >
               Priority Inbox
             </Button>
+            <ThemeToggle />
           </Box>
         </Toolbar>
       </AppBar>
