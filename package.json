@@ -7,7 +7,7 @@
     "start": "dotenv -e notification_app_fe/.env.local -- concurrently --kill-others-on-fail --prefix \"[{name}]\" --names \"frontend,backend\" --prefix-colors \"cyan,yellow\" \"npm run start:fe\" \"npm run start:be\"",
     "start:fe": "npm run dev --prefix notification_app_fe",
     "start:be": "node notification_app_be/priorityInbox.js 10",
-    "install:all": "npm install --prefix notification_app_fe",
+    "install:all": "npm install && npm install --prefix notification_app_fe",
     "register": "node register.js"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "ts-node": "^10.9.2",
     "typescript": "^7.0.2"
   }
 }

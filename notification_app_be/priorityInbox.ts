@@ -164,7 +164,11 @@ class PriorityInbox {
   private heap = new MinHeap();
   private seenIds = new Set<string>();
 
-  constructor(private readonly topN: number) { }
+  private readonly topN: number;
+
+  constructor(topN: number) {
+    this.topN = topN;
+  }
 
   offer(notification: Notification): boolean {
     if (!notification || !notification.ID) return false;

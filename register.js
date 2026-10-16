@@ -75,15 +75,25 @@ async function main() {
   console.log('\nAuthentication Success!');
   console.log(`Token: ${token.substring(0, 30)}...`);
 
-  // Write to .env.local for frontend
+  // Write to .env.local for frontend and backend (loaded via dotenv)
   const envPath = path.join(__dirname, 'notification_app_fe', '.env.local');
-  const envContent = `# API Token for evaluation service\nNEXT_PUBLIC_API_TOKEN=${token}\n`;
+  const envContent = [
+    '# Evaluation Service Configuration',
+    `NEXT_PUBLIC_API_TOKEN=${token}`,
+    `API_TOKEN=${token}`,
+    'API_BASE_URL=http://4.224.186.213',
+    'API_PATH=/evaluation-service/notifications',
+    'POLL_MS=10000',
+    ''
+  ].join('\n');
   fs.writeFileSync(envPath, envContent, 'utf8');
-  console.log(`\nSuccessfully wrote NEXT_PUBLIC_API_TOKEN to ${envPath}`);
+  console.log(`\nSuccessfully wrote environment configuration to ${envPath}`);
 
-  console.log('\nPlease run the backend with:');
+  console.log('\nYou can now start the entire system with:');
+  console.log('  npm start');
+  console.log('Or run the backend independently with:');
   console.log(`  $env:API_TOKEN="${token}"`);
-  console.log('  node notification_app_be/priorityInbox.js');
+  console.log('  npm run start:be');
 }
 
 main().catch(console.error);
