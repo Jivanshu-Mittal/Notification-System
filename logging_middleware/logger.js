@@ -26,7 +26,7 @@ function Log(stack, level, packageField, message) {
   const normalizedStack = String(stack).toLowerCase();
   const normalizedLevel = String(level).toLowerCase();
   const normalizedPackage = String(packageField).toLowerCase();
-  
+
   // Validate constraints
   if (!VALID_STACKS.has(normalizedStack)) {
     console.warn(`[Logger Warning] Invalid stack value: "${stack}"`);
